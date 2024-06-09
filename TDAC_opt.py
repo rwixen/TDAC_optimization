@@ -39,8 +39,7 @@ def min_stopband_energy_TDAC_window(m, M, omega_s):
     
     P = calc_P(omega_s, m, M)
     args = (omega_s, P, m, M)
-    optresult = sp.optimize.minimize(obj_and_grad, betas.flatten(), args, method="BFGS", jac=True, \
-                         options={"disp": False, "gtol": np.finfo(float).eps})
+    optresult = sp.optimize.minimize(obj_and_grad, betas.flatten(), args, method="BFGS", jac=True)
     betas = np.reshape(optresult.x, (M // 2, m))
     gis = gis_from_betas(betas, m, M)
     p0 = p0_from_gis(gis, m, M)
