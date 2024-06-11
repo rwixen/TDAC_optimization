@@ -16,7 +16,7 @@ def min_stopband_energy_TDAC_window(m, M, omega_s):
     """
     Optimize a protototype filter for an extended TDAC transform.
     M is the number channels of the transform.
-        M must be greater than 2 and is typically less than or equal to about 2048.
+        M must be greater than or equal to 2 and is typically less than or equal to about 2048.
     m is the extenstion factor such that 2 * M * m is the length of the filter.
         m must be at least 1 and is typically less than about 4.
     omega_s is the cutoff frequency beyond which the filter's energy is minimized.
