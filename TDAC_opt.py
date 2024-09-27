@@ -25,6 +25,10 @@ def min_stopband_energy_TDAC_window(m, M, omega_s):
         p0, the optimized prototype filter
         betas, the lattice coefficients for each pair of polyphase components
     """
+    if M == 1:
+        p0 = np.zeros(2 * m * M)
+        p0[M * (m - 1):M * (m + 1)] = np.sqrt(1 / 2)
+        return p0, np.ones((M // 2, m))
     if m <= 3:
         betas = np.block([1 / np.sqrt(2) * np.ones((M // 2, 1)), np.zeros((M // 2, m - 1))])
     else:
