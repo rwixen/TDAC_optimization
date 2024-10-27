@@ -12,23 +12,25 @@ import scipy as sp
 
 # Optimization routine
 
-def min_stopband_energy_TDAC_window(m, M, omega_s):
+def min_stopband_energy_TDAC_window(m, M, omega_s=None):
     """
     Optimize a protototype filter for an extended TDAC transform.
     M is the number channels of the transform.
         M must be greater than or equal to 2 and is typically less than or equal to about 2048.
     m is the extenstion factor such that 2 * M * m is the length of the filter.
         m must be at least 1 and is typically less than about 4.
-    omega_s is the cutoff frequency beyond which the filter's energy is minimized.
+    omega_s is the cutoff frequency beyond which the filter's energy is minimized and defaults to np.pi / M.
     
     Returns:
         p0, the optimized prototype filter
         betas, the lattice coefficients for each pair of polyphase components
     """
-    if M == 1:
+    if M <= 1:
         p0 = np.zeros(2 * m * M)
         p0[M * (m - 1):M * (m + 1)] = np.sqrt(1 / 2)
         return p0, np.ones((M // 2, m))
+    if omega_s is None:
+        omega_s = np.pi / M
     if m <= 3:
         betas = np.block([1 / np.sqrt(2) * np.ones((M // 2, 1)), np.zeros((M // 2, m - 1))])
     else:
@@ -227,11 +229,11 @@ def plot_filter_and_frequency_response(p0, m, M):
     plt.show()
 
     N = np.maximum(2 ** 12, (2 * m * M) * 8)
-    freq_response = np.abs(np.fft.rfft(p0, N))[:N // 2 + 1] / M / np.sqrt(2)
+    freq_response = np.abs(np.fft.rfft(p0, N))[:N // 2 + 1] / M / np.sqrt(2) if M != 0 else np.empty(0)
     mag_response = 20 * np.log10(freq_response, where=freq_response != 0)
     mag_response[freq_response == 0] = -np.inf
     plt.figure()
-    plt.plot(np.linspace(0, .5, N // 2 + 1), mag_response)
+    plt.plot(np.linspace(0, .5, mag_response.shape[0]), mag_response)
     plt.xlabel("Normalized Frequency ($\omega/2\pi$)")
     plt.ylabel(r"Scaled Magnitude Response (dB)")
     plt.title("Optimized Protoype Filter Magnitude Response ($m = {}$,  $M = {}$)".format(m, M))
