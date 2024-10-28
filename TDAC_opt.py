@@ -70,10 +70,7 @@ def p0_from_gis(gis, m, M):
     """
     Compute the prototype filter p0 from its 2M polyphase components gis.
     """
-    p0 = np.zeros(2 * m * M)
-    for i in range(2 * M):
-        p0[i::2 * M] = gis[i]
-    return p0
+    return gis.T.flatten()
 
 def gis_from_betas(betas, m, M):
     """
