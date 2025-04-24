@@ -24,7 +24,7 @@ def min_stopband_energy_TDAC_window(m, M, omega_s=None):
     Returns:
         p0, the optimized prototype filter
         betas, the lattice coefficients for each pair of polyphase components
-    """
+    """    
     if M <= 1:
         p0 = np.zeros(2 * m * M)
         p0[M * (m - 1):M * (m + 1)] = np.sqrt(1 / 2)
@@ -76,10 +76,27 @@ def gis_from_betas(betas, m, M):
     """
     Compute the set of 2M polyphase components from the set of M // 2 * m lattice coefficients.
     """
-    gis = np.empty((2 * M, m))
-    for i in range(M // 2):
-        gis[i, :], gis[i + M, :] = gi_and_giplusM_from_beta(betas[i, :], m, normalize=True)
-        gis[2 * M - 1 - i, ::-1], gis[M - 1 - i, ::-1] = gis[i, :], gis[i + M, :] # linear phase
+    gis = np.zeros((2 * M, m))
+    
+    gis[:M // 2, 0] = betas[:, 0]
+    gis[M:M + M // 2, 0] = 1
+    for i in range(1, m):
+        # roll the non-empty indices
+        gis[M:M + M // 2, 1:i + 1] = gis[M:M + M // 2, :i]
+        gis[M:M + M // 2, 0] = 0
+        
+        gis[:M // 2, :i + 1], gis[M:M + M // 2, :i + 1] = \
+                betas[:, i][:, np.newaxis] * gis[:M // 2, :i + 1] + gis[M:M + M // 2, :i + 1], \
+                gis[:M // 2, :i + 1] - betas[:, i][:, np.newaxis] * gis[M:M + M // 2, :i + 1]
+    
+    # normalize
+    alphas = calc_alphas(betas)[:, np.newaxis]
+    gis[:M // 2, :] *= alphas
+    gis[M:M + M // 2, :] *= alphas
+   
+    # linear phase
+    gis[M - (M // 2):M, :] = gis[M:M + M // 2, :][::-1, ::-1]
+    gis[-(M // 2):, :] = gis[:M // 2, :][::-1, ::-1]
     if M % 2 != 0:
         gis[M // 2, :], gis[M // 2 + M, :] = np.zeros(m), np.zeros(m)
         gis[M // 2, m // 2], gis[M // 2 + M, m - 1 - m // 2] = np.sqrt(.5), np.sqrt(.5)
@@ -101,17 +118,17 @@ def gi_and_giplusM_from_beta(beta, m, normalize):
         
         gi[:i + 1], giplusM[:i + 1] = beta[i] * gi[:i + 1] + giplusM[:i + 1], gi[:i + 1] + -beta[i] * giplusM[:i + 1]
     if normalize:
-        alpha = calc_alpha(beta)
+        alpha = calc_alphas(beta)
         gi *= alpha
         giplusM *= alpha
     return gi, giplusM
 
-def calc_alpha(beta):
+def calc_alphas(betas):
     """
     Compute the scale factor to apply to a pair of polyphase components calculated from
     a set of lattice coefficients such that the polyphase components have unity gain.
     """
-    return np.prod(1 / np.sqrt(1 + beta ** 2))
+    return np.prod(1 / np.sqrt(1 + betas ** 2), axis=-1) # use axis 1 if betas is 2d or axis 0 if betas is 1d
 
 # Computing the gradient of the objective, phi1, with respect to the lattice coefficients, betas
 
@@ -181,7 +198,7 @@ def jac_normalized_gi_and_giplusM_wrt_betai(i, betas, m):
     with respect to the ith set of lattice coefficients, betas[i].
     """
     beta = betas[i, :]
-    alpha = calc_alpha(beta)
+    alpha = calc_alphas(beta)
     gi, giplusM = gi_and_giplusM_from_beta(beta, m, normalize=False)
         
     dalpha_dbetai = -alpha * beta / (1 + np.square(beta))
@@ -215,7 +232,7 @@ def jac_unnormalized_gi_and_giplusM_wrt_betai(i, betas, m):
 
 # Utiltity functions
 
-def plot_filter_and_frequency_response(p0, m, M):
+def plot_filter_and_frequency_response(p0, m, M, dbMin=-60, OmegaMax=.5):
     """
     A utility function to plot a filter and its frequency response.
     """
@@ -234,6 +251,6 @@ def plot_filter_and_frequency_response(p0, m, M):
     plt.xlabel("Normalized Frequency ($\omega/2\pi$)")
     plt.ylabel(r"Scaled Magnitude Response (dB)")
     plt.title("Optimized Protoype Filter Magnitude Response ($m = {}$,  $M = {}$)".format(m, M))
-    plt.xlim(0, .5)
-    plt.ylim((-60, 10))
+    plt.xlim(0, OmegaMax)
+    plt.ylim((dbMin, 10))
     plt.show()
